@@ -1,0 +1,37 @@
+# Python bytecode and cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment & secrets
+.env
+
+# Build / packaging
+build/
+dist/
+*.egg-info/
+
+# IDE / editor settings
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Project outputs
+output/
+
+# Local SQLite databases
+property_valuations.db
+reports_registry.db
+users.db
+
+# Logs (if any)
+*.log
+
