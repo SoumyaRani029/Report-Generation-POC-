@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Property Report Generator Dashboard</title>
+    
+    <!-- React and ReactDOM from CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel Standalone for JSX transformation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #0f172a;
+            color: #e5e7eb;
+            margin: 0;
+        }
+        
+        .app {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .header {
+            flex-shrink: 0;
+            padding: 16px 24px;
+            background: rgba(15, 23, 42, 0.8);
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .header .muted {
+            color: #94a3b8;
+            font-size: 0.85rem;
+            margin-top: 4px;
+        }
+        
+        .main {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            gap: 16px;
+            padding: 16px;
+        }
+        
+        .sidebar {
+            width: 250px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            overflow-y: auto;
+        }
+        
+        .content-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            overflow-y: auto;
+            min-width: 0;
+        }
+        
+        .right-panel {
+            width: 350px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            overflow-y: auto;
+        }
+        
+        .card {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 20px 24px;
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .card h2 {
+            color: #e2e8f0;
+            margin-bottom: 12px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            border-bottom: 2px solid rgba(96, 165, 250, 0.3);
+            padding-bottom: 8px;
+        }
+        
+        .logs-card {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+        
+        .logs-container {
+            margin-top: 12px;
+            padding: 12px;
+            border-radius: 10px;
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            overflow-y: auto;
+            font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+            font-size: 0.85rem;
+            flex: 1;
+        }
+        
+        .logs-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .logs-container::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 3px;
+        }
+        
+        .logs-container::-webkit-scrollbar-thumb {
+            background: rgba(96, 165, 250, 0.5);
+            border-radius: 3px;
+        }
+        
+        .upload-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+        
+        input[type="file"] {
+            flex: 1;
+            min-width: 200px;
+            padding: 10px;
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 8px;
+            color: #e5e7eb;
+            cursor: pointer;
+        }
+        
+        input[type="file"]:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .primary-btn, .secondary-btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+        
+        .primary-btn {
+            background: linear-gradient(135deg, #22c55e 0%, #10b981 100%);
+            color: white;
+        }
+        
+        .primary-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+        }
+        
+        .primary-btn:disabled {
+            background: #4b5563;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .secondary-btn {
+            background: rgba(30, 41, 59, 0.6);
+            color: #e5e7eb;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .secondary-btn:hover {
+            background: rgba(30, 41, 59, 0.8);
+            border-color: rgba(96, 165, 250, 0.4);
+            color: #60a5fa;
+        }
+        
+        .button-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+        
+        .muted {
+            color: #94a3b8;
+        }
+        
+        .tiny {
+            font-size: 0.8rem;
+        }
+        
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            margin-bottom: 16px;
+        }
+        
+        .alert-error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+        }
+        
+        .alert-success {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            color: #86efac;
+        }
+        
+        .status {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            font-size: 0.9rem;
+        }
+        
+        .status-processing {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #93c5fd;
+        }
+        
+        .status-success {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            color: #86efac;
+        }
+        
+        .status-error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+        }
+        
+        .log-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 4px;
+            align-items: baseline;
+            padding: 4px 0;
+        }
+        
+        .log-time {
+            color: #6b7280;
+            min-width: 90px;
+            font-size: 0.75rem;
+        }
+        
+        .log-msg {
+            flex: 1;
+            color: #e5e7eb;
+        }
+        
+        .log-duration {
+            color: #a3e635;
+            font-size: 0.75rem;
+            min-width: 60px;
+            text-align: right;
+        }
+        
+        .log-info .log-msg {
+            color: #e5e7eb;
+        }
+        
+        .log-success .log-msg,
+        .log-SUCCESS .log-msg {
+            color: #86efac;
+            font-weight: 600;
+        }
+        
+        .log-success,
+        .log-SUCCESS {
+            background: rgba(34, 197, 94, 0.1);
+            border-left: 3px solid rgba(34, 197, 94, 0.5);
+            padding-left: 8px;
+            margin: 6px 0;
+        }
+        
+        /* Special styling for job completion messages */
+        .log-completion {
+            background: rgba(34, 197, 94, 0.15) !important;
+            border-left: 4px solid #22c55e !important;
+            padding: 8px 12px !important;
+            margin: 8px 0 !important;
+            border-radius: 6px;
+        }
+        
+        .log-completion .log-msg {
+            color: #86efac !important;
+            font-weight: 700 !important;
+            font-size: 0.95rem !important;
+        }
+        
+        .log-completion .log-time {
+            color: #86efac !important;
+            font-weight: 500 !important;
+        }
+        
+        .log-error .log-msg {
+            color: #fca5a5;
+        }
+        
+        .log-warning .log-msg {
+            color: #facc15;
+        }
+        
+        .nav-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #94a3b8;
+            text-decoration: none;
+            font-size: 0.9rem;
+            margin-top: 20px;
+            transition: color 0.2s ease;
+        }
+        
+        .nav-link:hover {
+            color: #60a5fa;
+        }
+    </style>
+</head>
+<body>
+    <div id="app-root"></div>
+    
+    {% raw %}
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        
+        // Format time helper - handles both timestamp (HH:MM:SS.mmm) and ISO datetime formats
+        const formatTime = (timestamp, datetime) => {
+            // Prefer datetime if available (ISO format)
+            if (datetime && datetime.trim()) {
+                try {
+                    // Handle ISO format with or without Z
+                    let dateStr = datetime;
+                    if (dateStr.includes('Z') && !dateStr.includes('+')) {
+                        dateStr = dateStr.replace('Z', '+00:00');
+                    }
+                    const d = new Date(dateStr);
+                    if (!isNaN(d.getTime())) {
+                        return d.toLocaleTimeString('en-US', { 
+                            hour12: false, 
+                            hour: '2-digit', 
+                            minute: '2-digit', 
+                            second: '2-digit',
+                            fractionalSecondDigits: 3
+                        });
+                    }
+                } catch (e) {
+                    // Fall through to timestamp parsing
+                }
+            }
+            
+            // Handle timestamp format (HH:MM:SS.mmm or HH:MM:SS)
+            if (timestamp && timestamp.trim()) {
+                // If it's already in HH:MM:SS.mmm or HH:MM:SS format, return as is
+                if (typeof timestamp === 'string') {
+                    const timePattern = /^\d{1,2}:\d{2}:\d{2}(\.\d{1,3})?$/;
+                    if (timePattern.test(timestamp.trim())) {
+                        // Ensure it's in HH:MM:SS format
+                        const parts = timestamp.trim().split(':');
+                        if (parts.length === 3) {
+                            const hours = parts[0].padStart(2, '0');
+                            const minutes = parts[1].padStart(2, '0');
+                            const seconds = parts[2];
+                            return `${hours}:${minutes}:${seconds}`;
+                        }
+                        return timestamp.trim();
+                    }
+                }
+                
+                // Try parsing as ISO date string
+                try {
+                    let dateStr = timestamp;
+                    if (dateStr.includes('Z') && !dateStr.includes('+')) {
+                        dateStr = dateStr.replace('Z', '+00:00');
+                    }
+                    const d = new Date(dateStr);
+                    if (!isNaN(d.getTime())) {
+                        return d.toLocaleTimeString('en-US', { 
+                            hour12: false, 
+                            hour: '2-digit', 
+                            minute: '2-digit', 
+                            second: '2-digit',
+                            fractionalSecondDigits: 3
+                        });
+                    }
+                } catch (e) {
+                    // If parsing fails, return original if it looks like a time
+                    if (typeof timestamp === 'string' && timestamp.includes(':')) {
+                        return timestamp;
+                    }
+                }
+            }
+            
+            // Fallback: return current time
+            const now = new Date();
+            return now.toLocaleTimeString('en-US', { 
+                hour12: false, 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit',
+                fractionalSecondDigits: 3
+            });
+        };
+        
+        // Format duration helper - shows time taken for each step
+        const formatDuration = (ms) => {
+            if (ms == null || ms === undefined || isNaN(ms)) return "N/A";
+            
+            // Handle 0 duration
+            if (ms === 0) {
+                return "0 ms";
+            }
+            
+            // Always show duration, even if very small
+            if (ms < 1) {
+                // Less than 1ms, show in microseconds
+                const micros = Math.round(ms * 1000);
+                return micros > 0 ? `${micros} μs` : "0 μs";
+            } else if (ms < 1000) {
+                // Less than 1 second, show milliseconds with 2 decimal places
+                return `${ms.toFixed(2)} ms`;
+            } else if (ms < 60000) {
+                // Less than 1 minute, show seconds with 2 decimal places
+                const seconds = (ms / 1000).toFixed(2);
+                return `${seconds} s`;
+            } else {
+                // 1 minute or more, show minutes and seconds
+                const minutes = Math.floor(ms / 60000);
+                const seconds = ((ms % 60000) / 1000).toFixed(2);
+                return `${minutes}m ${seconds}s`;
+            }
+        };
+        
+        // Upload Section Component
+        function UploadSection({ onUploadSuccess, onUploadError, disabled }) {
+            const fileInputRef = useRef(null);
+            const folderInputRef = useRef(null);
+            const [selectedFiles, setSelectedFiles] = useState([]);
+            const [uploadMode, setUploadMode] = useState('files'); // 'files' or 'folder'
+            
+            const handleFileChange = (e) => {
+                const files = Array.from(e.target.files || []);
+                setSelectedFiles(files);
+            };
+            
+            const handleFolderChange = (e) => {
+                const files = Array.from(e.target.files || []);
+                setSelectedFiles(files);
+            };
+            
+            const handleUploadClick = async () => {
+                if (selectedFiles.length === 0) {
+                    onUploadError("Please select at least one file or folder.");
+                    return;
+                }
+                try {
+                    await onUploadSuccess(selectedFiles);
+                } catch (err) {
+                    onUploadError(err.message || "Upload failed");
+                }
+            };
+            
+            // Count documents and images
+            const documents = selectedFiles.filter(f => {
+                const ext = f.name.split('.').pop()?.toLowerCase();
+                return ['pdf', 'txt'].includes(ext);
+            });
+            const images = selectedFiles.filter(f => {
+                const ext = f.name.split('.').pop()?.toLowerCase();
+                return ['jpg', 'jpeg', 'png', 'bmp', 'tiff', 'webp'].includes(ext);
+            });
+            
+            return (
+                <div className="card">
+                    <h2>1. Upload Property Documents</h2>
+                    <p className="muted tiny">
+                        Upload a folder or files containing property documents (PDF, TXT) and images (JPG, PNG, etc.) together. 
+                        The system will automatically separate them.
+                    </p>
+                    
+                    <div style={{marginBottom: '12px', display: 'flex', gap: '8px'}}>
+                        <button
+                            onClick={() => {
+                                setUploadMode('files');
+                                setSelectedFiles([]);
+                                if (fileInputRef.current) fileInputRef.current.value = '';
+                                if (folderInputRef.current) folderInputRef.current.value = '';
+                            }}
+                            className={uploadMode === 'files' ? "primary-btn" : "secondary-btn"}
+                            style={{fontSize: '0.85rem', padding: '6px 12px'}}
+                        >
+                            📄 Select Files
+                        </button>
+                        <button
+                            onClick={() => {
+                                setUploadMode('folder');
+                                setSelectedFiles([]);
+                                if (fileInputRef.current) fileInputRef.current.value = '';
+                                if (folderInputRef.current) folderInputRef.current.value = '';
+                            }}
+                            className={uploadMode === 'folder' ? "primary-btn" : "secondary-btn"}
+                            style={{fontSize: '0.85rem', padding: '6px 12px'}}
+                        >
+                            📁 Select Folder
+                        </button>
+                    </div>
+                    
+                    <div className="upload-row">
+                        {uploadMode === 'folder' ? (
+                            <input
+                                type="file"
+                                webkitdirectory=""
+                                directory=""
+                                multiple
+                                accept=".pdf,.txt,.jpg,.jpeg,.png,.bmp,.tiff,.webp"
+                                ref={folderInputRef}
+                                onChange={handleFolderChange}
+                                disabled={disabled}
+                                style={{flex: 1}}
+                            />
+                        ) : (
+                            <input
+                                type="file"
+                                multiple
+                                accept=".pdf,.txt,.jpg,.jpeg,.png,.bmp,.tiff,.webp"
+                                ref={fileInputRef}
+                                onChange={handleFileChange}
+                                disabled={disabled}
+                                style={{flex: 1}}
+                            />
+                        )}
+                        <button
+                            onClick={handleUploadClick}
+                            disabled={disabled || selectedFiles.length === 0}
+                            className="primary-btn"
+                        >
+                            Upload & Start
+                        </button>
+                    </div>
+                    
+                    {selectedFiles.length > 0 && (
+                        <div style={{marginTop: '12px', padding: '10px', background: 'rgba(15, 23, 42, 0.5)', borderRadius: '8px'}}>
+                            <p className="muted tiny" style={{marginBottom: '6px', fontWeight: '600'}}>
+                                📁 Selected: {selectedFiles.length} file(s)
+                            </p>
+                            <p className="muted tiny" style={{color: '#60a5fa'}}>
+                                📄 Documents: {documents.length} | 🖼️ Images: {images.length}
+                            </p>
+                            {selectedFiles.length <= 5 && (
+                                <p className="muted tiny" style={{marginTop: '6px', fontSize: '0.75rem', color: '#94a3b8'}}>
+                                    {selectedFiles.map((f) => f.name).join(", ")}
+                                </p>
+                            )}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+        
+        // Logs Panel Component
+        function LogsPanel({ logs }) {
+            const bottomRef = useRef(null);
+            
+            useEffect(() => {
+                if (bottomRef.current) {
+                    bottomRef.current.scrollIntoView({ behavior: "smooth" });
+                }
+            }, [logs]);
+            
+            return (
+                <div className="card logs-card">
+                    <h2>2. Processing Logs</h2>
+                    <p className="muted tiny">
+                        Shows what is happening inside the code: step, timestamp, and time taken for each step.
+                    </p>
+                    <div className="logs-container">
+                        {logs.length === 0 && (
+                            <p className="muted">No logs yet. Upload documents to start.</p>
+                        )}
+                        {logs.map((log, index) => {
+                            const timestamp = log.timestamp || log.datetime || '';
+                            const datetime = log.datetime || '';
+                            // Always show duration if available (even if 0 or very small)
+                            const duration = (log.duration_ms != null && log.duration_ms !== undefined) ? log.duration_ms : null;
+                            
+                            // Normalize log level to lowercase for CSS class
+                            const logLevel = (log.level || "info").toLowerCase();
+                            
+                            // Check if this is a job completion message
+                            const isCompletionMessage = (log.message || '').toLowerCase().includes('job') && 
+                                                       (log.message || '').toLowerCase().includes('completed');
+                            
+                            return (
+                                <div key={index} className={`log-row log-${logLevel} ${isCompletionMessage ? 'log-completion' : ''}`}>
+                                    <span className="log-time">[{formatTime(timestamp, datetime)}]</span>
+                                    <span className="log-msg">{log.message || log}</span>
+                                    <span className="log-duration">
+                                        ({formatDuration(duration)})
+                                    </span>
+                                </div>
+                            );
+                        })}
+                        <div ref={bottomRef} />
+                    </div>
+                </div>
+            );
+        }
+        
+        // Report Status Component
+        function ReportStatus({ reportId, status, totalDurationMs, startedAt, finishedAt, reportData }) {
+            const formatDuration = (ms) => {
+                if (!ms) return "";
+                if (ms < 1000) return `${ms.toFixed(0)} ms`;
+                if (ms < 60000) {
+                    const seconds = (ms / 1000).toFixed(2);
+                    return `${seconds} seconds`;
+                }
+                const minutes = Math.floor(ms / 60000);
+                const seconds = ((ms % 60000) / 1000).toFixed(2);
+                return `${minutes}m ${seconds}s`;
+            };
+            
+            const formatTime = (dateString) => {
+                if (!dateString) return "";
+                try {
+                    return new Date(dateString).toLocaleTimeString();
+                } catch {
+                    return dateString;
+                }
+            };
+            
+            if (!status) {
+                return (
+                    <div className="card">
+                        <h2>3. Report Status</h2>
+                        <p className="muted tiny" style={{marginTop: '8px'}}>
+                            Waiting for upload to start...
+                        </p>
+                    </div>
+                );
+            }
+            
+            const isSuccess = status === "success";
+            const isProcessing = status === "processing";
+            const isError = status === "error";
+            
+            return (
+                <div className="card">
+                    <h2>3. Report Status</h2>
+                    
+                    {isProcessing && (
+                        <>
+                            <div className="status status-processing">
+                                ⏳ Report is being generated... Please wait.
+                            </div>
+                            {startedAt && (
+                                <p className="muted tiny" style={{marginTop: '8px'}}>
+                                    Started: {formatTime(startedAt)}
+                                </p>
+                            )}
+                        </>
+                    )}
+                    
+                    {isSuccess && (
+                        <>
+                            <div className="status status-success">
+                                ✅ Report has been generated successfully.
+                            </div>
+                            {reportData && (
+                                <div style={{marginTop: '12px', padding: '10px', background: 'rgba(34, 197, 94, 0.1)', borderRadius: '8px', border: '1px solid rgba(34, 197, 94, 0.2)'}}>
+                                    <p className="muted tiny" style={{marginBottom: '4px'}}>
+                                        <strong style={{color: '#86efac'}}>Property:</strong> {reportData.property_name || 'Property'}
+                                    </p>
+                                    {reportData.documents_count !== undefined && (
+                                        <p className="muted tiny" style={{marginBottom: '4px'}}>
+                                            📄 Documents: {reportData.documents_count} | 🖼️ Images: {reportData.images_count || 0}
+                                        </p>
+                                    )}
+                                    {reportData.total_files !== undefined && (
+                                        <p className="muted tiny">
+                                            📁 Total Files: {reportData.total_files}
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+                            {startedAt && (
+                                <div style={{marginTop: '12px', padding: '10px', background: 'rgba(15, 23, 42, 0.5)', borderRadius: '8px'}}>
+                                    <p className="muted tiny" style={{marginBottom: '4px'}}>
+                                        <strong>Started:</strong> {formatTime(startedAt)}
+                                    </p>
+                                    {finishedAt && (
+                                        <p className="muted tiny" style={{marginBottom: '4px'}}>
+                                            <strong>Finished:</strong> {formatTime(finishedAt)}
+                                        </p>
+                                    )}
+                                    {totalDurationMs != null && (
+                                        <p className="muted tiny">
+                                            <strong>Total Time:</strong> {formatDuration(totalDurationMs)}
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+                            <div className="button-row" style={{marginTop: '16px'}}>
+                                <a
+                                    href="/view"
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="secondary-btn"
+                                >
+                                    👁️ View Report
+                                </a>
+                                <a
+                                    href="/download"
+                                    className="primary-btn"
+                                >
+                                    💾 Download Report
+                                </a>
+                            </div>
+                        </>
+                    )}
+                    
+                    {isError && (
+                        <div className="status status-error">
+                            ❌ Failed to generate report. Check logs for details.
+                        </div>
+                    )}
+                </div>
+            );
+        }
+        
+        // Reports List Component
+        function ReportsList({ reports, onRefresh }) {
+            const formatDate = (dateString) => {
+                if (!dateString) return "";
+                try {
+                    const d = new Date(dateString);
+                    return d.toLocaleString();
+                } catch {
+                    return dateString;
+                }
+            };
+            
+            const formatFileSize = (bytes) => {
+                if (!bytes) return "Unknown";
+                if (bytes < 1024) return bytes + " B";
+                if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + " KB";
+                return (bytes / (1024 * 1024)).toFixed(2) + " MB";
+            };
+            
+            if (reports.length === 0) {
+                return (
+                    <div className="card">
+                        <h2>My Reports</h2>
+                        <p className="muted tiny">No reports generated yet. Upload property documents to create your first report.</p>
+                    </div>
+                );
+            }
+            
+            return (
+                <div className="card">
+                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px'}}>
+                        <div>
+                            <h2>My Reports ({reports.length})</h2>
+                            <p className="muted tiny" style={{marginTop: '4px', fontSize: '0.75rem'}}>
+                                Property documents uploaded by you
+                            </p>
+                        </div>
+                        <button className="secondary-btn" onClick={onRefresh} style={{fontSize: '0.85rem', padding: '6px 12px'}}>
+                            🔄 Refresh
+                        </button>
+                    </div>
+                    <div style={{flex: 1, overflowY: 'auto', minHeight: 0}}>
+                        <table style={{width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem'}}>
+                            <thead>
+                                <tr style={{borderBottom: '1px solid rgba(148, 163, 184, 0.2)'}}>
+                                    <th style={{textAlign: 'left', padding: '8px', fontSize: '0.75rem', color: '#94a3b8'}}>Property Name</th>
+                                    <th style={{textAlign: 'left', padding: '8px', fontSize: '0.75rem', color: '#94a3b8'}}>Uploaded By</th>
+                                    <th style={{textAlign: 'left', padding: '8px', fontSize: '0.75rem', color: '#94a3b8'}}>Created</th>
+                                    <th style={{textAlign: 'left', padding: '8px', fontSize: '0.75rem', color: '#94a3b8'}}>Size</th>
+                                    <th style={{textAlign: 'left', padding: '8px', fontSize: '0.75rem', color: '#94a3b8'}}>Status</th>
+                                    <th style={{textAlign: 'center', padding: '8px', fontSize: '0.75rem', color: '#94a3b8'}}>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {reports.map((report) => (
+                                    <tr key={report.report_id} style={{borderBottom: '1px solid rgba(148, 163, 184, 0.1)'}}>
+                                        <td style={{padding: '10px 8px', fontSize: '0.85rem', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}} title={report.property_name}>
+                                            {report.property_name}
+                                        </td>
+                                        <td style={{padding: '10px 8px', fontSize: '0.8rem', color: '#60a5fa', fontWeight: '500'}}>
+                                            {report.username || 'Unknown'}
+                                        </td>
+                                        <td style={{padding: '10px 8px', fontSize: '0.75rem', color: '#94a3b8', whiteSpace: 'nowrap'}}>
+                                            {formatDate(report.created_at).split(',')[0]}
+                                        </td>
+                                        <td style={{padding: '10px 8px', fontSize: '0.75rem', color: '#94a3b8'}}>{formatFileSize(report.file_size)}</td>
+                                        <td style={{padding: '10px 8px'}}>
+                                            <span style={{
+                                                padding: '3px 6px',
+                                                borderRadius: '4px',
+                                                fontSize: '0.7rem',
+                                                background: report.exists ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                                color: report.exists ? '#86efac' : '#fca5a5'
+                                            }}>
+                                                {report.exists ? '✓' : '✗'}
+                                            </span>
+                                        </td>
+                                        <td style={{padding: '10px 8px', textAlign: 'center'}}>
+                                            <div style={{display: 'flex', gap: '6px', justifyContent: 'center', flexDirection: 'column'}}>
+                                                {report.exists && (
+                                                    <>
+                                                        <a
+                                                            href={`/api/reports/${report.report_id}/view`}
+                                                            target="_blank"
+                                                            className="secondary-btn"
+                                                            style={{fontSize: '0.7rem', padding: '3px 6px', textDecoration: 'none'}}
+                                                        >
+                                                            👁️ View Report 
+                                                        </a>
+                                                        <a
+                                                            href={`/api/reports/${report.report_id}/download`}
+                                                            className="primary-btn"
+                                                            style={{fontSize: '0.7rem', padding: '3px 6px', textDecoration: 'none'}}
+                                                        >
+                                                            💾 Download Report 
+                                                        </a>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
+        }
+        
+        // Main App Component
+        function App() {
+            const [logs, setLogs] = useState([]);
+            const [uploadMessage, setUploadMessage] = useState("");
+            const [globalError, setGlobalError] = useState("");
+            const [activeReports, setActiveReports] = useState([]); // Track multiple active reports
+            const [reportStatus, setReportStatus] = useState("");
+            const [startedAt, setStartedAt] = useState(null);
+            const [finishedAt, setFinishedAt] = useState(null);
+            const [totalDurationMs, setTotalDurationMs] = useState(null);
+            const [reports, setReports] = useState([]);
+            const [currentUser, setCurrentUser] = useState(null);
+            const [reportData, setReportData] = useState(null);
+            const [completedJobs, setCompletedJobs] = useState([]); // Track completed job numbers
+            const pollIntervalRef = useRef(null);
+            
+            // Check authentication on mount
+            useEffect(() => {
+                fetch('/api/auth/current')
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success && data.authenticated) {
+                            setCurrentUser(data.user);
+                        } else {
+                            // Redirect to login if not authenticated
+                            window.location.href = '/login?redirect=/dashboard';
+                        }
+                    })
+                    .catch(() => {
+                        window.location.href = '/login?redirect=/dashboard';
+                    });
+            }, []);
+            
+            const handleLogout = async () => {
+                try {
+                    await fetch('/api/auth/logout', { method: 'POST' });
+                    window.location.href = '/login';
+                } catch (err) {
+                    console.error('Logout error:', err);
+                    window.location.href = '/login';
+                }
+            };
+            
+            // Poll for logs and status
+            const pollDashboard = async () => {
+                try {
+                    const response = await fetch('/api/dashboard/stats');
+                    const data = await response.json();
+                    
+                    if (data.success && data.stats) {
+                        // Convert logs to format with timestamp and duration
+                        const formattedLogs = (data.stats.logs || []).map(log => {
+                            // Handle both dict and string log formats
+                            let logEntry = typeof log === 'string' ? { message: log } : log;
+                            
+                            let message = logEntry.message || logEntry || '';
+                            let timestamp = logEntry.timestamp || '';
+                            let datetime = logEntry.datetime || '';
+                            let level = logEntry.level || 'info';
+                            let duration_ms = logEntry.duration_ms != null ? logEntry.duration_ms : null;
+                            
+                            // If no timestamp, use datetime or current time
+                            if (!timestamp && datetime) {
+                                try {
+                                    const d = new Date(datetime);
+                                    if (!isNaN(d.getTime())) {
+                                        timestamp = d.toLocaleTimeString('en-US', { 
+                                            hour12: false, 
+                                            hour: '2-digit', 
+                                            minute: '2-digit', 
+                                            second: '2-digit',
+                                            fractionalSecondDigits: 3
+                                        });
+                                    }
+                                } catch (e) {
+                                    // Keep original timestamp
+                                }
+                            }
+                            
+                            // If still no timestamp, use current time
+                            if (!timestamp) {
+                                timestamp = new Date().toLocaleTimeString('en-US', { 
+                                    hour12: false, 
+                                    hour: '2-digit', 
+                                    minute: '2-digit', 
+                                    second: '2-digit',
+                                    fractionalSecondDigits: 3
+                                });
+                            }
+                            
+                            // Try to extract duration from timing data if not already set
+                            if (duration_ms == null && data.stats.timings) {
+                                // Match log message with timing function names
+                                for (const [funcName, timing] of Object.entries(data.stats.timings)) {
+                                    const funcNameLower = funcName.toLowerCase();
+                                    const messageLower = message.toLowerCase();
+                                    
+                                    if (messageLower.includes(funcNameLower) || 
+                                        messageLower.includes('starting:') || 
+                                        messageLower.includes('completed:')) {
+                                        
+                                        // Use last duration if available
+                                        if (timing.last && timing.last.duration != null) {
+                                            duration_ms = timing.last.duration * 1000; // Convert to ms
+                                            break;
+                                        } else if (timing.average != null) {
+                                            duration_ms = timing.average * 1000;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            return {
+                                timestamp,
+                                datetime,
+                                message,
+                                duration_ms,
+                                level
+                            };
+                        });
+                        
+                        setLogs(formattedLogs);
+                        
+                        // Update status based on progress
+                        const progress = data.stats.progress || {};
+                        if (progress.percent === 100) {
+                            if (reportStatus !== "success") {
+                                setReportStatus("success");
+                                const end = new Date();
+                                setFinishedAt(end.toISOString());
+                                if (startedAt) {
+                                    const start = new Date(startedAt);
+                                    setTotalDurationMs(end.getTime() - start.getTime());
+                                }
+                                // Refresh reports when completed
+                                fetchReports();
+                            }
+                        } else if (progress.percent > 0 && reportStatus !== "processing") {
+                            setReportStatus("processing");
+                        }
+                    }
+                } catch (error) {
+                    console.error("Error polling dashboard:", error);
+                }
+            };
+            
+            const handleUploadSuccess = async (files) => {
+                setGlobalError("");
+                
+                try {
+                    const formData = new FormData();
+                    formData.append('property_name', 'Property');
+                    
+                    // Upload all files together - backend will automatically separate documents and images
+                    files.forEach(file => {
+                        formData.append('files', file);
+                    });
+                    
+                    if (files.length === 0) {
+                        throw new Error("Please upload at least one valid file.");
+                    }
+                    
+                    const response = await fetch('/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (!response.ok) {
+                        let errorMessage = `Server error: ${response.status}`;
+                        try {
+                            const errorData = await response.json();
+                            errorMessage = errorData.error || errorMessage;
+                        } catch (e) {
+                            const text = await response.text();
+                            if (text) errorMessage = text;
+                        }
+                        throw new Error(errorMessage);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        // Show success message immediately after upload
+                        const fileCount = files.length;
+                        const fileText = fileCount === 1 ? 'file' : 'files';
+                        setUploadMessage(`✅ ${fileCount} ${fileText} are successfully uploaded. Report generation started.`);
+                        
+                        // Add to active reports list
+                        const newReport = {
+                            report_id: data.report_id,
+                            property_name: data.property_name || 'Property',
+                            status: data.status || 'processing',
+                            started_at: new Date().toISOString(),
+                            documents_count: data.documents_count || 0,
+                            images_count: data.images_count || 0,
+                            total_files: data.total_files || 0,
+                            job_number: data.job_number || (activeReports.length + 1)
+                        };
+                        setActiveReports(prev => [...prev, newReport]);
+                        
+                        // Set as current report for status display
+                        setReportStatus("processing");
+                        const now = new Date();
+                        setStartedAt(now.toISOString());
+                        setReportData({
+                            property_name: data.property_name || 'Property',
+                            documents_count: data.documents_count || 0,
+                            images_count: data.images_count || 0,
+                            total_files: data.total_files || 0
+                        });
+                        
+                        // Start polling for logs and reports
+                        if (pollIntervalRef.current) {
+                            clearInterval(pollIntervalRef.current);
+                        }
+                        pollIntervalRef.current = setInterval(pollDashboard, 2000);
+                        
+                        // Refresh reports list to show new processing report
+                        fetchReports();
+                    } else {
+                        throw new Error(data.error || "Failed to upload documents");
+                    }
+                } catch (err) {
+                    console.error(err);
+                    setGlobalError(err.message || "Something went wrong during upload.");
+                }
+            };
+            
+            const handleUploadError = (msg) => {
+                setGlobalError(msg);
+            };
+            
+            // Cleanup polling on unmount
+            useEffect(() => {
+                return () => {
+                    if (pollIntervalRef.current) {
+                        clearInterval(pollIntervalRef.current);
+                    }
+                };
+            }, []);
+            
+            // Fetch all reports
+            const fetchReports = async () => {
+                try {
+                    const response = await fetch('/api/reports');
+                    const data = await response.json();
+                    if (data.success) {
+                        const fetchedReports = data.reports || [];
+                        setReports(fetchedReports);
+                        
+                        // Update active reports status and track completed jobs
+                        setActiveReports(prev => {
+                            const updated = prev.map(activeReport => {
+                                const fetchedReport = fetchedReports.find(r => r.report_id === activeReport.report_id);
+                                if (fetchedReport) {
+                                    // Check if report just completed
+                                    if (activeReport.status === 'processing' && fetchedReport.status === 'completed') {
+                                        const jobNum = fetchedReport.job_number || activeReports.indexOf(activeReport) + 1;
+                                        // Add to completed jobs if not already there
+                                        setCompletedJobs(prevJobs => {
+                                            if (!prevJobs.includes(jobNum)) {
+                                                return [...prevJobs, jobNum];
+                                            }
+                                            return prevJobs;
+                                        });
+                                    }
+                                    
+                                    return {
+                                        ...activeReport,
+                                        status: fetchedReport.status,
+                                        job_number: fetchedReport.job_number || activeReport.job_number,
+                                        finished_at: fetchedReport.status === 'completed' ? new Date().toISOString() : activeReport.finished_at
+                                    };
+                                }
+                                return activeReport;
+                            }).filter(r => r.status === 'processing' || r.status === 'completed');
+                            
+                            return updated;
+                        });
+                        
+                        // Check for newly completed reports
+                        fetchedReports.forEach(report => {
+                            if (report.status === 'completed' && report.job_number) {
+                                setCompletedJobs(prevJobs => {
+                                    if (!prevJobs.includes(report.job_number)) {
+                                        return [...prevJobs, report.job_number];
+                                    }
+                                    return prevJobs;
+                                });
+                            }
+                        });
+                        
+                        // Check if any active report completed
+                        const completedReports = fetchedReports.filter(r => r.status === 'completed');
+                        if (completedReports.length > 0 && reportStatus === "processing") {
+                            const latestCompleted = completedReports[0];
+                            if (latestCompleted.report_id === activeReports[0]?.report_id) {
+                                setReportStatus("success");
+                                const end = new Date();
+                                setFinishedAt(end.toISOString());
+                                if (startedAt) {
+                                    const start = new Date(startedAt);
+                                    setTotalDurationMs(end.getTime() - start.getTime());
+                                }
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error("Error fetching reports:", error);
+                }
+            };
+            
+            // Initial poll
+            useEffect(() => {
+                pollDashboard();
+                const interval = setInterval(pollDashboard, 2000);
+                fetchReports(); // Load reports on mount
+                return () => clearInterval(interval);
+            }, []);
+            
+            // Refresh reports when a new report is generated
+            useEffect(() => {
+                if (reportStatus === "success") {
+                    fetchReports();
+                }
+            }, [reportStatus]);
+            
+            // Don't render if not authenticated
+            if (!currentUser) {
+            return (
+                <div className="app" style={{justifyContent: 'center', alignItems: 'center'}}>
+                    <div style={{textAlign: 'center', padding: '40px', color: '#94a3b8'}}>
+                        Loading...
+                    </div>
+                </div>
+            );
+            }
+            
+            return (
+                <div className="app">
+                    <header className="header">
+                        <div>
+                            <h1>Property Report Generator Dashboard</h1>
+                            <p className="muted">
+                                Upload property documents, watch the internal logs with timing, and download the generated report.
+                            </p>
+                            {completedJobs.length > 0 && (
+                                <div style={{
+                                    marginTop: '12px',
+                                    padding: '10px 16px',
+                                    background: 'rgba(34, 197, 94, 0.15)',
+                                    border: '1px solid rgba(34, 197, 94, 0.3)',
+                                    borderRadius: '8px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    flexWrap: 'wrap'
+                                }}>
+                                    <span style={{color: '#86efac', fontWeight: '600'}}>✅ Completed Jobs:</span>
+                                    {completedJobs.sort((a, b) => a - b).map((jobNum, idx) => (
+                                        <span key={jobNum} style={{
+                                            color: '#86efac',
+                                            fontWeight: '600',
+                                            padding: '4px 10px',
+                                            background: 'rgba(34, 197, 94, 0.2)',
+                                            borderRadius: '6px',
+                                            fontSize: '0.9rem'
+                                        }}>
+                                            Job {jobNum}
+                                            {idx < completedJobs.length - 1 && <span style={{marginLeft: '8px', color: 'rgba(134, 239, 172, 0.5)'}}>•</span>}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        <div style={{display: 'flex', alignItems: 'center', gap: '16px'}}>
+                            <div style={{textAlign: 'right'}}>
+                                <div style={{color: '#e5e7eb', fontSize: '14px', fontWeight: '500'}}>{currentUser.username}</div>
+                                <div style={{color: '#94a3b8', fontSize: '12px'}}>{currentUser.email}</div>
+                            </div>
+                            <button 
+                                onClick={handleLogout}
+                                className="secondary-btn"
+                                style={{padding: '8px 16px', fontSize: '14px'}}
+                            >
+                                Logout
+                            </button>
+                        </div>
+                    </header>
+                    
+                    <main className="main">
+                        {/* LEFT SIDEBAR */}
+                        <div className="sidebar">
+                            {globalError && (
+                                <div className="alert alert-error">
+                                    {globalError}
+                                </div>
+                            )}
+                            
+                            {uploadMessage && (
+                                <div className="alert alert-success">
+                                    {uploadMessage}
+                                </div>
+                            )}
+                            
+                            <UploadSection
+                                onUploadSuccess={handleUploadSuccess}
+                                onUploadError={handleUploadError}
+                                disabled={false} // Allow parallel uploads
+                            />
+                            
+                            <ReportStatus
+                                reportId={null}
+                                status={reportStatus}
+                                totalDurationMs={totalDurationMs}
+                                startedAt={startedAt}
+                                finishedAt={finishedAt}
+                                reportData={reportData}
+                            />
+                        </div>
+                        
+                        {/* CENTER CONTENT AREA */}
+                        <div className="content-area">
+                            <LogsPanel logs={logs} />
+                        </div>
+                        
+                        {/* RIGHT PANEL */}
+                        <div className="right-panel">
+                            <ReportsList reports={reports} onRefresh={fetchReports} />
+                        </div>
+                    </main>
+                </div>
+            );
+        }
+        
+        // Render the app
+        const rootElement = document.getElementById('app-root');
+        if (ReactDOM.createRoot) {
+            const root = ReactDOM.createRoot(rootElement);
+            root.render(<App />);
+        } else {
+            ReactDOM.render(<App />, rootElement);
+        }
+    </script>
+    {% endraw %}
+</body>
+</html>

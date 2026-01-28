@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Property Report Dashboard</title>
+    
+    <!-- React and ReactDOM from CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel Standalone for JSX transformation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #0f172a;
+            min-height: 100vh;
+            padding: 0;
+            color: #e5e7eb;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+        }
+        
+        .header-bar {
+            background: #1e293b;
+            padding: 15px 30px;
+            border-bottom: 1px solid #334155;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .header-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #e5e7eb;
+        }
+        
+        .job-completed-banner {
+            background: #064e3b;
+            color: #bbf7d0;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            display: none;
+            margin-left: 20px;
+            white-space: nowrap;
+        }
+        
+        .job-completed-banner.show {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .login-btn {
+            background: #3b82f6;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+        
+        .login-btn:hover {
+            background: #2563eb;
+        }
+        
+        .page {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+        
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            align-items: start;
+        }
+        
+        .left-panel, .right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .card {
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 14px;
+            border: 1px solid #334155;
+        }
+        
+        .card h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #e5e7eb;
+            font-weight: 600;
+        }
+        
+        .fileInput {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            margin-bottom: 15px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            color: #e5e7eb;
+            cursor: pointer;
+        }
+        
+        .fileInput:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .primaryBtn {
+            background: #22c55e;
+            color: #000;
+            padding: 12px 24px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            width: 100%;
+            transition: all 0.2s ease;
+            font-size: 15px;
+        }
+        
+        .primaryBtn:hover:not(:disabled) {
+            background: #16a34a;
+            transform: translateY(-1px);
+        }
+        
+        .primaryBtn:disabled {
+            background: #4b5563;
+            color: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .secondaryBtn {
+            background: transparent;
+            color: white;
+            padding: 10px 18px;
+            border-radius: 8px;
+            border: 1px solid #64748b;
+            cursor: pointer;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.2s ease;
+        }
+        
+        .secondaryBtn:hover {
+            background: #334155;
+            border-color: #94a3b8;
+        }
+        
+        .successBox {
+            background: #064e3b;
+            padding: 12px 16px;
+            border-radius: 8px;
+            color: #bbf7d0;
+            font-size: 14px;
+            margin-top: 12px;
+        }
+        
+        .errorBox {
+            background: #7f1d1d;
+            padding: 12px 16px;
+            border-radius: 8px;
+            color: #fca5a5;
+            font-size: 14px;
+            margin-top: 12px;
+        }
+        
+        .processingBox {
+            background: #1e3a5f;
+            padding: 12px 16px;
+            border-radius: 8px;
+            color: #93c5fd;
+            font-size: 14px;
+            margin-top: 12px;
+        }
+        
+        .logsBox {
+            background: #0f172a;
+            border-radius: 8px;
+            padding: 0;
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #334155;
+            font-size: 13px;
+        }
+        
+        .logsBox::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .logsBox::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        
+        .logsBox::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 3px;
+        }
+        
+        .logsTable {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .logsTable thead {
+            background: #1e293b;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .logsTable th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #e5e7eb;
+            font-size: 13px;
+            border-bottom: 2px solid #334155;
+        }
+        
+        .logsTable td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #334155;
+            color: #e5e7eb;
+            font-size: 13px;
+        }
+        
+        .logsTable tbody tr:hover {
+            background: #1e293b;
+        }
+        
+        .logsTable tbody tr.log-error td {
+            color: #fca5a5;
+        }
+        
+        .logsTable tbody tr.log-warning td {
+            color: #facc15;
+        }
+        
+        .no-logs-message {
+            text-align: center;
+            padding: 40px;
+            color: #94a3b8;
+            font-size: 14px;
+        }
+        
+        .logLine {
+            margin-bottom: 6px;
+            padding: 2px 0;
+            color: #e5e7eb;
+        }
+        
+        .logLine.log-error {
+            color: #fca5a5;
+        }
+        
+        .logLine.log-warning {
+            color: #facc15;
+        }
+        
+        .buttonRow {
+            display: flex;
+            gap: 12px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .fileInfo {
+            margin-top: 10px;
+            padding: 8px;
+            background: #0f172a;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #94a3b8;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #64748b;
+            border-top-color: #22c55e;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .stats-card {
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 14px;
+            border: 1px solid #334155;
+        }
+        
+        .stat-item {
+            padding: 12px;
+            margin-bottom: 10px;
+            background: #0f172a;
+            border-radius: 8px;
+            border-left: 4px solid;
+        }
+        
+        .stat-item.processing {
+            border-left-color: #3b82f6;
+        }
+        
+        .stat-item.success {
+            border-left-color: #22c55e;
+        }
+        
+        .stat-item.error {
+            border-left-color: #ef4444;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        
+        .stat-value {
+            font-size: 16px;
+            color: #e5e7eb;
+            font-weight: 600;
+        }
+        
+        .timeText {
+            margin-top: 10px;
+            color: #cbd5e1;
+            font-size: 14px;
+        }
+        
+        @media (max-width: 1024px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app-root"></div>
+    
+    {% raw %}
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        
+        // Format time helper
+        const formatTime = (timestamp) => {
+            if (!timestamp) return "";
+            try {
+                if (typeof timestamp === 'string' && timestamp.includes(':')) {
+                    return timestamp;
+                }
+                const d = new Date(timestamp);
+                return d.toLocaleTimeString();
+            } catch {
+                return timestamp || "";
+            }
+        };
+        
+        // Format duration helper - always show time, even for milliseconds
+        const formatDuration = (ms) => {
+            if (ms == null || ms === undefined || isNaN(ms)) return "N/A";
+            // Always show time, even if it's very small
+            if (ms < 1) {
+                // Less than 1ms, show in microseconds
+                return `${(ms * 1000).toFixed(0)} μs`;
+            } else if (ms < 1000) {
+                // Less than 1 second, show milliseconds with 2 decimal places
+                return `${ms.toFixed(2)} ms`;
+            } else if (ms < 60000) {
+                // Less than 1 minute, show seconds with 2 decimal places
+                const seconds = (ms / 1000).toFixed(2);
+                return `${seconds} s`;
+            } else {
+                // 1 minute or more, show minutes and seconds
+                const minutes = Math.floor(ms / 60000);
+                const seconds = ((ms % 60000) / 1000).toFixed(2);
+                return `${minutes}m ${seconds}s`;
+            }
+        };
+        
+        function DashboardTemplate() {
+            const [documents, setDocuments] = useState([]);
+            const [images, setImages] = useState([]);
+            const [loading, setLoading] = useState(false);
+            const [uploadSuccess, setUploadSuccess] = useState(false);
+            const [logs, setLogs] = useState([]);
+            const [reportStatus, setReportStatus] = useState("");
+            const [startedAt, setStartedAt] = useState(null);
+            const [finishedAt, setFinishedAt] = useState(null);
+            const [totalDurationMs, setTotalDurationMs] = useState(null);
+            const [error, setError] = useState("");
+            const [completedJobs, setCompletedJobs] = useState([]); // Array to track completed jobs: [1, 2, 3, ...]
+            const [currentJobNumber, setCurrentJobNumber] = useState(0); // Track current job number
+            const [isAuthenticated, setIsAuthenticated] = useState(null); // null = checking, true/false = known
+            const pollIntervalRef = useRef(null);
+            const logsBottomRef = useRef(null);
+            const isCompletedRef = useRef(false); // Track completion to stop polling
+            
+            // Check authentication on mount
+            useEffect(() => {
+                fetch('/api/auth/current')
+                    .then(res => res.json())
+                    .then(data => {
+                        setIsAuthenticated(data.success && data.authenticated);
+                    })
+                    .catch(() => {
+                        setIsAuthenticated(false);
+                    });
+            }, []);
+            
+            const handleFolderUpload = (e) => {
+                const files = Array.from(e.target.files || []);
+                const newDocs = [];
+                const newImgs = [];
+                
+                files.forEach(file => {
+                    if (file && file.name) {
+                        const ext = file.name.split('.').pop()?.toLowerCase();
+                        if (['pdf', 'txt'].includes(ext)) {
+                            newDocs.push(file);
+                        } else if (['jpg', 'jpeg', 'png', 'bmp', 'tiff', 'webp'].includes(ext)) {
+                            newImgs.push(file);
+                        }
+                    }
+                });
+                
+                setDocuments([...documents, ...newDocs]);
+                setImages([...images, ...newImgs]);
+                setError(null);
+                
+                // Show success message when files are selected
+                if (newDocs.length > 0 || newImgs.length > 0) {
+                    setUploadSuccess(true);
+                    // Clear success message after 5 seconds
+                    setTimeout(() => {
+                        setUploadSuccess(false);
+                    }, 5000);
+                } else {
+                    setUploadSuccess(false);
+                }
+            };
+            
+            const handleGenerateReport = async () => {
+                // Check authentication first
+                if (isAuthenticated === false) {
+                    setError("Please login to generate reports. Redirecting to login page...");
+                    setTimeout(() => {
+                        window.location.href = '/login?redirect=/';
+                    }, 2000);
+                    return;
+                }
+                
+                if (documents.length === 0 && images.length === 0) {
+                    setError("Please upload at least one document or image file.");
+                    return;
+                }
+                
+                if (images.length === 0) {
+                    setError("Please upload at least one image file.");
+                    return;
+                }
+                
+                setLoading(true);
+                setError("");
+                setUploadSuccess(false);
+                setLogs([]);
+                setReportStatus("processing");
+                // Increment job number for new upload
+                setCurrentJobNumber(prev => prev + 1);
+                const now = new Date();
+                setStartedAt(now.toISOString());
+                setFinishedAt(null);
+                setTotalDurationMs(null);
+                
+                const formData = new FormData();
+                formData.append('property_name', 'Property');
+                
+                documents.forEach(file => formData.append('documents', file));
+                images.forEach(file => formData.append('images', file));
+                
+                // Reset completion flag for new upload
+                isCompletedRef.current = false;
+                
+                // Start polling for logs immediately
+                if (pollIntervalRef.current) {
+                    clearInterval(pollIntervalRef.current);
+                    pollIntervalRef.current = null;
+                }
+                pollDashboard();
+                pollIntervalRef.current = setInterval(pollDashboard, 1000);
+                
+                try {
+                    const response = await fetch('/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (!response.ok) {
+                        // Check if it's an authentication error
+                        if (response.status === 401) {
+                            const errorData = await response.json().catch(() => ({}));
+                            setError("Authentication required. Please login to generate reports.");
+                            // Redirect to login after 2 seconds
+                            setTimeout(() => {
+                                window.location.href = '/login?redirect=/';
+                            }, 2000);
+                            setLoading(false);
+                            setReportStatus("error");
+                            return;
+                        }
+                        
+                        let errorMessage = `Server error: ${response.status}`;
+                        try {
+                            const errorData = await response.json();
+                            errorMessage = errorData.error || errorMessage;
+                        } catch (e) {
+                            const text = await response.text();
+                            if (text) errorMessage = text;
+                        }
+                        throw new Error(errorMessage);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        setUploadSuccess(true);
+                    } else {
+                        setError(data.error || "Failed to generate report");
+                        setReportStatus("error");
+                    }
+                } catch (err) {
+                    setError(err.message || "Something went wrong");
+                    setReportStatus("error");
+                } finally {
+                    setLoading(false);
+                }
+            };
+            
+            // Poll for logs and status
+            const pollDashboard = async () => {
+                // Stop polling immediately if already completed
+                if (isCompletedRef.current) {
+                    if (pollIntervalRef.current) {
+                        clearInterval(pollIntervalRef.current);
+                        pollIntervalRef.current = null;
+                    }
+                    return;
+                }
+                
+                try {
+                    const response = await fetch('/api/dashboard/stats');
+                    const data = await response.json();
+                    
+                    if (data.success && data.stats) {
+                        // Convert logs to format with timestamp and duration
+                        const formattedLogs = (data.stats.logs || []).map(log => {
+                            let duration_ms = null;
+                            let message = typeof log === 'string' ? log : (log.message || log);
+                            let timestamp = log.timestamp || log.datetime || new Date().toISOString();
+                            let level = log.level || 'info';
+                            
+                            // Try to extract duration from timing data
+                            if (data.stats.timings) {
+                                for (const [funcName, timing] of Object.entries(data.stats.timings)) {
+                                    const funcNameLower = funcName.toLowerCase();
+                                    const messageLower = message.toLowerCase();
+                                    if (messageLower.includes(funcNameLower) || 
+                                        messageLower.includes('starting:') || 
+                                        messageLower.includes('completed:')) {
+                                        if (timing.last && timing.last.duration) {
+                                            duration_ms = timing.last.duration * 1000;
+                                        } else if (timing.average) {
+                                            duration_ms = timing.average * 1000;
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+                            
+                            return {
+                                timestamp,
+                                message,
+                                duration_ms,
+                                level
+                            };
+                        });
+                        
+                        setLogs(formattedLogs);
+                        
+                        // Update status based on progress
+                        const progress = data.stats.progress || {};
+                        
+                        // Check NEWLY formatted logs for actual completion and processing status
+                        // Use formattedLogs (the new state) not logs (the old state)
+                        const hasCompletionLog = formattedLogs.some(log => {
+                            const msg = (log.message || '').toLowerCase();
+                            return msg.includes('done! report saved') || 
+                                   msg.includes('report saved to') ||
+                                   msg.includes('completed: generate_report_from_files') ||
+                                   msg.includes('✅ done! report saved') ||
+                                   msg.includes('✅ all property data saved') ||
+                                   msg.includes('all property data saved to property_valuations.db') ||
+                                   msg.includes('report generated successfully:') ||
+                                   msg.includes('report saved to output');
+                        });
+                        
+                        // Check if we're still processing by looking for active processing messages
+                        // Only check the MOST recent 3 logs to avoid false positives
+                        const recentLogs = formattedLogs.slice(-3); // Check only last 3 logs from NEW state
+                        const isStillProcessing = recentLogs.some(log => {
+                            const msg = (log.message || '').toLowerCase();
+                            // Exclude completion messages from processing check
+                            if (msg.includes('done!') || msg.includes('saved to') || msg.includes('completed:') || 
+                                msg.includes('all property data saved') || msg.includes('report generated successfully') ||
+                                msg.includes('report saved to output')) {
+                                return false;
+                            }
+                            return msg.includes('extracting') ||
+                                   msg.includes('sending') ||
+                                   msg.includes('analyzing') ||
+                                   msg.includes('processing') ||
+                                   msg.includes('waiting for llm') ||
+                                   msg.includes('starting:') ||
+                                   msg.includes('running ocr') ||
+                                   msg.includes('generating pdf') ||
+                                   msg.includes('building report') ||
+                                   (msg.includes('saving') && !msg.includes('saved'));
+                        });
+                        
+                        // Only mark as success if progress is 100% AND we have completion log AND not still processing
+                        if (progress.percent === 100 && hasCompletionLog && !isStillProcessing) {
+                            // Mark as completed immediately to stop polling
+                            isCompletedRef.current = true;
+                            
+                            if (reportStatus !== "success") {
+                                setReportStatus("success");
+                                const end = new Date();
+                                setFinishedAt(end.toISOString());
+                                if (startedAt) {
+                                    const start = new Date(startedAt);
+                                    const totalTime = end.getTime() - start.getTime();
+                                    setTotalDurationMs(totalTime);
+                                    console.log(`✅ Report generation completed in ${formatDuration(totalTime)}`);
+                                } else {
+                                    // If startedAt is not set, try to calculate from formattedLogs
+                                    if (formattedLogs.length > 0) {
+                                        const firstLog = formattedLogs[0];
+                                        const lastLog = formattedLogs[formattedLogs.length - 1];
+                                        if (firstLog && lastLog && firstLog.timestamp && lastLog.timestamp) {
+                                            // Calculate from first to last log timestamp
+                                            const startTime = new Date(`2000-01-01T${firstLog.timestamp}`);
+                                            const endTime = new Date(`2000-01-01T${lastLog.timestamp}`);
+                                            const totalTime = endTime.getTime() - startTime.getTime();
+                                            if (totalTime > 0) {
+                                                setTotalDurationMs(totalTime);
+                                            }
+                                        }
+                                    }
+                                }
+                                // Add current job to completed jobs list
+                                if (currentJobNumber > 0 && !completedJobs.includes(currentJobNumber)) {
+                                    setCompletedJobs(prev => [...prev, currentJobNumber]);
+                                }
+                            } else if (reportStatus === "success" && !totalDurationMs && startedAt) {
+                                // If already success but duration not set, calculate it
+                                const end = new Date();
+                                const start = new Date(startedAt);
+                                setTotalDurationMs(end.getTime() - start.getTime());
+                                setFinishedAt(end.toISOString());
+                            }
+                            
+                            // ALWAYS stop polling when completion is detected
+                            if (pollIntervalRef.current) {
+                                clearInterval(pollIntervalRef.current);
+                                pollIntervalRef.current = null;
+                                console.log('🛑 Polling stopped - report generation complete');
+                            }
+                        } else if (progress.percent > 0 && reportStatus !== "success") {
+                            // Keep as processing if we have progress but not complete
+                            if (reportStatus !== "processing") {
+                                setReportStatus("processing");
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error("Error polling dashboard:", error);
+                }
+            };
+            
+            // Auto-scroll logs to bottom
+            useEffect(() => {
+                if (logsBottomRef.current) {
+                    logsBottomRef.current.scrollIntoView({ behavior: "smooth" });
+                }
+            }, [logs]);
+            
+            // Poll continuously while processing or when no status set
+            useEffect(() => {
+                // Don't poll if report is already complete (check both status and flag)
+                if (reportStatus === "success" || isCompletedRef.current) {
+                    // Stop polling when truly complete
+                    if (pollIntervalRef.current) {
+                        clearInterval(pollIntervalRef.current);
+                        pollIntervalRef.current = null;
+                    }
+                    return; // Exit early, don't start new polling
+                }
+                
+                // Poll every 1 second during processing for real-time updates
+                // Poll every 2 seconds when idle
+                const pollInterval = (reportStatus === "processing") ? 1000 : 2000;
+                
+                if (!reportStatus || reportStatus === "" || reportStatus === "processing") {
+                    // Don't start polling if already completed
+                    if (isCompletedRef.current) {
+                        return;
+                    }
+                    
+                    // Clear any existing interval first
+                    if (pollIntervalRef.current) {
+                        clearInterval(pollIntervalRef.current);
+                    }
+                    pollDashboard();
+                    const interval = setInterval(pollDashboard, pollInterval);
+                    pollIntervalRef.current = interval;
+                    return () => {
+                        clearInterval(interval);
+                        pollIntervalRef.current = null;
+                    };
+                }
+            }, [reportStatus]);
+            
+            // Cleanup on unmount
+            useEffect(() => {
+                return () => {
+                    if (pollIntervalRef.current) {
+                        clearInterval(pollIntervalRef.current);
+                    }
+                };
+            }, []);
+            
+            return (
+                <div>
+                    {/* HEADER BAR */}
+                    <div className="header-bar">
+                        <div className="header-left">
+                            <div className="header-title">Property Report Dashboard</div>
+                            {completedJobs.length > 0 && (
+                                <div className={`job-completed-banner ${completedJobs.length > 0 ? 'show' : ''}`}>
+                                    {completedJobs.map((jobNum, idx) => (
+                                        <span key={jobNum}>
+                                            ✅ Job {jobNum} has been completed
+                                            {idx < completedJobs.length - 1 && <span style={{margin: '0 8px', color: '#86efac'}}>•</span>}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        {isAuthenticated === false ? (
+                            <a href="/login" className="login-btn">Login</a>
+                        ) : isAuthenticated === true ? (
+                            <a href="/dashboard" className="login-btn" style={{background: '#22c55e'}}>Dashboard</a>
+                        ) : (
+                            <div className="login-btn" style={{background: '#64748b', cursor: 'default'}}>Loading...</div>
+                        )}
+                    </div>
+                    
+                    <div className="page">
+                        <div className="main-layout">
+                            {/* LEFT PANEL */}
+                            <div className="left-panel">
+                                {/* 1. UPLOAD SECTION */}
+                                <div className="card">
+                                    <h2>1. Upload Property Documents</h2>
+                                    <input 
+                                        type="file" 
+                                        webkitdirectory=""
+                                        directory=""
+                                        multiple
+                                        onChange={handleFolderUpload}
+                                        className="fileInput"
+                                        disabled={loading}
+                                    />
+                                    {(documents.length > 0 || images.length > 0) && (
+                                        <div className="fileInfo">
+                                            📁 Files Selected: {documents.length + images.length} file(s) 
+                                            (📄 {documents.length} documents | 🖼️ {images.length} images)
+                                        </div>
+                                    )}
+                                    
+                                    {uploadSuccess && (
+                                        <div className="successBox">
+                                            ✅ Files are successfully uploaded
+                                        </div>
+                                    )}
+                                    
+                                    {isAuthenticated === false && (
+                                        <div className="errorBox" style={{background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#fca5a5', marginTop: '12px'}}>
+                                            ⚠️ Authentication required. Please <a href="/login" style={{color: '#60a5fa', textDecoration: 'underline'}}>login</a> to generate reports.
+                                        </div>
+                                    )}
+                                    
+                                    {error && (
+                                        <div className="errorBox">
+                                            ✗ {error}
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                {/* 2. GENERATE REPORT BUTTON */}
+                                <div className="card">
+                                    <button 
+                                        className="primaryBtn" 
+                                        onClick={handleGenerateReport}
+                                        disabled={loading || (documents.length === 0 && images.length === 0)}
+                                    >
+                                        {loading ? (
+                                            <>
+                                                <span className="loading"></span>
+                                                Generating Report...
+                                            </>
+                                        ) : (
+                                            "Generate Report"
+                                        )}
+                                    </button>
+                                </div>
+                                
+                                {/* 3. LOGS SECTION */}
+                                {(reportStatus || logs.length > 0) && (
+                                    <div className="card">
+                                        <h2>2. Recent Extraction Logs</h2>
+                                        <div className="logsBox">
+                                            {logs.length === 0 && reportStatus === "processing" && (
+                                                <div className="no-logs-message">⏳ Waiting for logs to appear... Processing started.</div>
+                                            )}
+                                            {logs.length === 0 && !reportStatus && (
+                                                <div className="no-logs-message">No extraction logs yet</div>
+                                            )}
+                                            {logs.length > 0 && (
+                                                <table className="logsTable">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>File Name</th>
+                                                            <th>Uploaded Time</th>
+                                                            <th>Processing Time</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {logs.map((log, index) => {
+                                                            // Extract function/step name from log message
+                                                            let fileName = log.message || "Processing";
+                                                            
+                                                            // Extract function name from patterns like "Starting: function_name" or "Completed: function_name"
+                                                            const startingMatch = fileName.match(/(?:Starting|⏱️\s*Starting):\s*([^\s\(]+)/i);
+                                                            const completedMatch = fileName.match(/(?:Completed|✅\s*Completed):\s*([^\s\(]+)/i);
+                                                            const failedMatch = fileName.match(/(?:Failed|❌\s*Failed):\s*([^\s\(]+)/i);
+                                                            
+                                                            if (startingMatch) {
+                                                                fileName = startingMatch[1];
+                                                            } else if (completedMatch) {
+                                                                fileName = completedMatch[1];
+                                                            } else if (failedMatch) {
+                                                                fileName = failedMatch[1];
+                                                            } else {
+                                                                // Try to extract file name from message (look for file extensions)
+                                                                const fileMatch = fileName.match(/([^\/\\\s]+\.(pdf|txt|jpg|jpeg|png|bmp|tiff|webp))/i);
+                                                                if (fileMatch) {
+                                                                    fileName = fileMatch[1];
+                                                                } else {
+                                                                    // Extract step name from common patterns
+                                                                    const stepMatch = fileName.match(/(?:📄|📝|💾|🔍|🤖|📊|✅|❌)\s*(.+?)(?:\s*\(|$)/);
+                                                                    if (stepMatch) {
+                                                                        fileName = stepMatch[1].trim();
+                                                                    } else {
+                                                                        // Use first part before colon or first 30 chars
+                                                                        if (fileName.includes(":")) {
+                                                                            fileName = fileName.split(":")[0].trim();
+                                                                        }
+                                                                        // Remove emojis and clean up
+                                                                        fileName = fileName.replace(/[📄📝💾🔍🤖📊✅❌⏱️]/g, "").trim();
+                                                                        if (!fileName) fileName = "Processing step";
+                                                                    }
+                                                                }
+                                                            }
+                                                            
+                                                            // Clean up function name (remove underscores, capitalize)
+                                                            fileName = fileName.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
+                                                            
+                                                            // Limit file name length
+                                                            if (fileName.length > 40) {
+                                                                fileName = fileName.substring(0, 37) + "...";
+                                                            }
+                                                            
+                                                            return (
+                                                                <tr key={index} className={`log-${log.level || "info"}`}>
+                                                                    <td>{fileName || "Processing step"}</td>
+                                                                    <td>{formatTime(log.timestamp)}</td>
+                                                                    <td style={{color: log.duration_ms != null ? '#a3e635' : '#94a3b8', fontWeight: '600'}}>
+                                                                        {log.duration_ms != null ? formatDuration(log.duration_ms) : "N/A"}
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        })}
+                                                        <tr ref={logsBottomRef}><td colSpan="3" style={{height: '1px', padding: 0}}></td></tr>
+                                                    </tbody>
+                                                </table>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                            
+                            {/* RIGHT PANEL */}
+                            <div className="right-panel">
+                                {/* REPORT STATUS & STATS */}
+                                <div className="card">
+                                    <h2>3. Report Status</h2>
+                                    
+                                    {reportStatus === "processing" && (
+                                        <div className="stat-item processing">
+                                            <div className="stat-label">Status</div>
+                                            <div className="stat-value">
+                                                <span className="loading"></span>
+                                                Processing
+                                            </div>
+                                        </div>
+                                    )}
+                                    
+                                    {reportStatus === "success" && (
+                                        <>
+                                            <div className="stat-item success">
+                                                <div className="stat-label">Status</div>
+                                                <div className="stat-value">✅ Report Generated</div>
+                                            </div>
+                                            <div className="successBox" style={{marginTop: '15px'}}>
+                                                ✔ Report has been generated successfully
+                                            </div>
+                                            {totalDurationMs && (
+                                                <div className="stat-item" style={{marginTop: '20px', padding: '15px', background: '#1e293b', borderRadius: '8px', border: '1px solid #334155'}}>
+                                                    <div className="stat-label" style={{fontSize: '13px', color: '#94a3b8', marginBottom: '8px'}}>Total Time Taken</div>
+                                                    <div className="stat-value" style={{fontSize: '24px', fontWeight: '700', color: '#22c55e', fontFamily: 'monospace'}}>
+                                                        {formatDuration(totalDurationMs)}
+                                                    </div>
+                                                    {startedAt && finishedAt && (
+                                                        <div style={{fontSize: '11px', color: '#64748b', marginTop: '8px'}}>
+                                                            Started: {new Date(startedAt).toLocaleTimeString()} | 
+                                                            Finished: {new Date(finishedAt).toLocaleTimeString()}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                            
+                                            {/* VIEW / DOWNLOAD BUTTONS */}
+                                            <div style={{marginTop: '20px', display: 'flex', gap: '12px', flexWrap: 'wrap'}}>
+                                                <a 
+                                                    href="/view" 
+                                                    target="_blank"
+                                                    className="secondaryBtn"
+                                                    style={{
+                                                        textDecoration: 'none',
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        padding: '12px 24px',
+                                                        fontSize: '14px',
+                                                        fontWeight: '600',
+                                                        borderRadius: '8px',
+                                                        border: '1px solid #64748b',
+                                                        background: 'transparent',
+                                                        color: 'white',
+                                                        transition: 'all 0.2s ease',
+                                                        cursor: 'pointer'
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        e.currentTarget.style.background = '#334155';
+                                                        e.currentTarget.style.borderColor = '#94a3b8';
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        e.currentTarget.style.background = 'transparent';
+                                                        e.currentTarget.style.borderColor = '#64748b';
+                                                    }}
+                                                >
+                                                    📄 View Report
+                                                </a>
+                                                <a 
+                                                    href="/download" 
+                                                    className="primaryBtn"
+                                                    style={{
+                                                        textDecoration: 'none',
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        padding: '12px 24px',
+                                                        fontSize: '14px',
+                                                        fontWeight: '600',
+                                                        borderRadius: '8px',
+                                                        background: '#22c55e',
+                                                        color: '#000',
+                                                        border: 'none',
+                                                        transition: 'all 0.2s ease',
+                                                        cursor: 'pointer',
+                                                        boxShadow: '0 2px 8px rgba(34, 197, 94, 0.3)'
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        e.currentTarget.style.background = '#16a34a';
+                                                        e.currentTarget.style.transform = 'translateY(-1px)';
+                                                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(34, 197, 94, 0.4)';
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        e.currentTarget.style.background = '#22c55e';
+                                                        e.currentTarget.style.transform = 'translateY(0)';
+                                                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(34, 197, 94, 0.3)';
+                                                    }}
+                                                >
+                                                    ⬇️ Download Report
+                                                </a>
+                                            </div>
+                                        </>
+                                    )}
+                                    
+                                    {reportStatus === "error" && (
+                                        <div className="stat-item error">
+                                            <div className="stat-label">Status</div>
+                                            <div className="stat-value">❌ Failed</div>
+                                        </div>
+                                    )}
+                                    
+                                    {!reportStatus && (
+                                        <div className="stat-item">
+                                            <div className="stat-label">Status</div>
+                                            <div className="stat-value">Waiting to start...</div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+        
+        // Render the app
+        const rootElement = document.getElementById('app-root');
+        if (ReactDOM.createRoot) {
+            const root = ReactDOM.createRoot(rootElement);
+            root.render(<DashboardTemplate />);
+        } else {
+            ReactDOM.render(<DashboardTemplate />, rootElement);
+        }
+    </script>
+    {% endraw %}
+</body>
+</html>

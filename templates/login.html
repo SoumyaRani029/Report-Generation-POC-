@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Property Report Dashboard</title>
+    
+    <!-- React and ReactDOM from CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel Standalone for JSX transformation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #1a1d29;
+            color: #e5e7eb;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .login-container {
+            width: 100%;
+            max-width: 400px;
+            padding: 20px;
+        }
+        
+        .login-card {
+            background: #252936;
+            border: 1px solid #2d3142;
+            border-radius: 12px;
+            padding: 32px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .login-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        
+        .login-header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+        
+        .login-header .logo-text {
+            color: #00d97e;
+        }
+        
+        .login-header p {
+            color: #94a3b8;
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #e5e7eb;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            background: #1a1d29;
+            border: 1px solid #2d3142;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #60a5fa;
+        }
+        
+        .btn-primary {
+            width: 100%;
+            padding: 12px;
+            background: #22c55e;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 8px;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            background: #16a34a;
+        }
+        
+        .btn-primary:disabled {
+            background: #4b5563;
+            cursor: not-allowed;
+        }
+        
+        .alert {
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        
+        .alert-error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+        }
+        
+        .alert-success {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            color: #86efac;
+        }
+        
+        .signup-link {
+            text-align: center;
+            margin-top: 24px;
+            color: #94a3b8;
+            font-size: 14px;
+        }
+        
+        .signup-link a {
+            color: #60a5fa;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .signup-link a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div id="app-root"></div>
+    
+    {% raw %}
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        
+        function LoginForm() {
+            const [username, setUsername] = useState("");
+            const [password, setPassword] = useState("");
+            const [error, setError] = useState("");
+            const [loading, setLoading] = useState(false);
+            const [redirectTo, setRedirectTo] = useState("");
+            
+            useEffect(() => {
+                // Check if already logged in
+                fetch('/api/auth/current')
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success && data.authenticated) {
+                            window.location.href = '/dashboard';
+                        }
+                    })
+                    .catch(() => {});
+                
+                // Get redirect parameter from URL
+                const params = new URLSearchParams(window.location.search);
+                const redirect = params.get('redirect') || '/dashboard';
+                setRedirectTo(redirect);
+            }, []);
+            
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setError("");
+                setLoading(true);
+                
+                try {
+                    const response = await fetch('/api/auth/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            username: username,
+                            password: password
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        // Redirect to dashboard or specified redirect
+                        window.location.href = redirectTo;
+                    } else {
+                        setError(data.error || 'Login failed');
+                        setLoading(false);
+                    }
+                } catch (err) {
+                    setError('Network error. Please try again.');
+                    setLoading(false);
+                }
+            };
+            
+            return (
+                <div className="login-container">
+                    <div className="login-card">
+                        <div className="login-header">
+                            <h1><span className="logo-text">property report.</span></h1>
+                            <p>Sign in to access your dashboard</p>
+                        </div>
+                        
+                        {error && (
+                            <div className="alert alert-error">
+                                {error}
+                            </div>
+                        )}
+                        
+                        <form onSubmit={handleSubmit}>
+                            <div className="form-group">
+                                <label className="form-label">Username or Email</label>
+                                <input
+                                    type="text"
+                                    className="form-input"
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
+                                    required
+                                    disabled={loading}
+                                    placeholder="Enter your username or email"
+                                />
+                            </div>
+                            
+                            <div className="form-group">
+                                <label className="form-label">Password</label>
+                                <input
+                                    type="password"
+                                    className="form-input"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    required
+                                    disabled={loading}
+                                    placeholder="Enter your password"
+                                />
+                            </div>
+                            
+                            <button
+                                type="submit"
+                                className="btn-primary"
+                                disabled={loading || !username || !password}
+                            >
+                                {loading ? 'Logging in...' : 'Login'}
+                            </button>
+                        </form>
+                        
+                        <div className="signup-link">
+                            Don't have an account? <a href="/signup">Sign up</a>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+        
+        // Render the app
+        const rootElement = document.getElementById('app-root');
+        if (ReactDOM.createRoot) {
+            const root = ReactDOM.createRoot(rootElement);
+            root.render(<LoginForm />);
+        } else {
+            ReactDOM.render(<LoginForm />, rootElement);
+        }
+    </script>
+    {% endraw %}
+</body>
+</html>
+
