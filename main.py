@@ -166,277 +166,41 @@ def save_to_sqlite_database(structured_data: dict, status_callback=None):
 
 @track_time("select_best_images_with_llm")
 def select_best_images_with_llm(image_paths: list, status_callback=None) -> tuple:
-    """Use LLM to analyze all images and select the best 5 matching required categories."""
+    """Use image classification (LLM or heuristic fallback) to select best 5 images for report categories."""
     from openai import APIError, AuthenticationError
-    import base64
-    
+    from image_classifier import classify_images
+
     if status_callback:
         status_callback("🔍 Analyzing images to select the best 5 for the report...")
-    
-    if len(image_paths) <= 5:
-        # If 5 or fewer images, use them all in order, try to find location map
-        location_map = None
-        # Simple heuristic: look for map-related keywords in filenames
-        # Prioritize Google Maps, satellite, and location-related keywords
-        location_map_keywords = ['map', 'location', 'google', 'satellite', 'street', 'gps', 'maps', 'road', 'address', 'area', 'loc', 'coordinate', 'lat', 'long']
-        for img in image_paths:
-            img_name_lower = Path(img).name.lower()
-            if any(keyword in img_name_lower for keyword in location_map_keywords):
-                location_map = Path(img)
-                break
-        return [Path(img) for img in image_paths[:5]], location_map
-    
-    # Prepare images as base64 for Vision API
-    image_contents = []
-    image_map = {}  # Map image index to path
-    
-    try:
-        for idx, img_path in enumerate(image_paths):
-            img_path_obj = Path(img_path)
-            # Read and encode image
-            with open(img_path_obj, "rb") as img_file:
-                image_data = base64.b64encode(img_file.read()).decode('utf-8')
-                
-            # Determine MIME type from extension
-            ext = img_path_obj.suffix.lower()
-            mime_types = {
-                '.jpg': 'image/jpeg',
-                '.jpeg': 'image/jpeg',
-                '.png': 'image/png',
-                '.gif': 'image/gif',
-                '.webp': 'image/webp'
-            }
-            mime_type = mime_types.get(ext, 'image/jpeg')
-            
-            image_contents.append({
-                "type": "image_url",
-                "image_url": {
-                    "url": f"data:{mime_type};base64,{image_data}"
-                }
-            })
-            image_map[idx] = str(img_path)
-    except Exception as e:
-        error_msg = f"Error encoding images: {str(e)}"
-        raise ValueError(error_msg)
-    
-    # Import prompt from prompts file
-    from prompts import get_image_selection_prompt
-    
-    # Get the prompt for image selection
-    prompt = get_image_selection_prompt(len(image_paths))
-    
-    try:
-        # Build content with text prompt followed by all images
-        content = [{"type": "text", "text": prompt}] + image_contents
 
-        response = client.chat.completions.create(
-            model="gpt-4.1",
-            messages=[
-                {"role": "user", "content": content}
-            ],
-            max_tokens=1000,
-            temperature=0.7,
-            timeout=120  # 2 minute timeout for image selection
+    try:
+        selected_paths, location_map_path = classify_images(
+            image_paths,
+            method="llm",
+            client=client,
+            status_callback=status_callback,
         )
-        
-        # Check if response has choices
-        if not response.choices or len(response.choices) == 0:
-            raise Exception("OpenAI API returned empty response - no choices available")
-        
-        text = response.choices[0].message.content
-        start = text.find("{")
-        end = text.rfind("}") + 1
-        try:
-            result = json.loads(text[start:end])
-            
-            # Map selected image indices back to image paths in correct order
-            selected_paths = [None] * 5  # Pre-allocate for 5 images
-            selected_items = result.get("selected_images", [])
-            
-            if status_callback:
-                status_callback(f"📋 LLM selected {len(selected_items)} images for categories")
-            
-            # Sort by category to ensure order (1, 2, 3, 4, 5)
-            selected_items.sort(key=lambda x: x.get("category", 0))
-            
-            used_indices = set()  # Track used indices to prevent duplicates
-            for item in selected_items:
-                category = item.get("category", 0)
-                img_idx = item.get("image_index")
-                
-                if status_callback:
-                    status_callback(f"  Category {category}: image_index {img_idx}")
-                
-                if 1 <= category <= 5 and img_idx is not None:
-                    # Validate index range
-                    if 0 <= img_idx < len(image_paths):
-                        if img_idx in image_map and img_idx not in used_indices:
-                            selected_paths[category - 1] = Path(image_map[img_idx])
-                            used_indices.add(img_idx)
-                            if status_callback:
-                                status_callback(f"    ✓ Mapped to: {Path(image_map[img_idx]).name}")
-                        elif img_idx in used_indices:
-                            if status_callback:
-                                status_callback(f"    ⚠️ Image index {img_idx} already used for another category")
-                    else:
-                        if status_callback:
-                            status_callback(f"    ✗ Invalid image_index {img_idx} (must be 0-{len(image_paths)-1})")
-                else:
-                    if status_callback:
-                        status_callback(f"    ✗ Invalid category {category} or missing image_index")
-            
-            # Fill any missing categories with fallback images (only if LLM didn't provide valid mapping)
-            missing_categories = [i for i in range(5) if selected_paths[i] is None]
-            if missing_categories:
-                if status_callback:
-                    status_callback(f"⚠️ {len(missing_categories)} categories missing, using fallback images")
-                
-                used_paths = set(str(p) for p in selected_paths if p is not None)
-                used_indices_set = set()
-                
-                for i in missing_categories:
-                    # Find an unused image
-                    found = False
-                    for idx in range(len(image_paths)):
-                        if idx not in used_indices_set:
-                            candidate_path = image_paths[idx]
-                            candidate_str = str(candidate_path)
-                            if candidate_str not in used_paths:
-                                selected_paths[i] = Path(candidate_path)
-                                used_paths.add(candidate_str)
-                                used_indices_set.add(idx)
-                                if status_callback:
-                                    status_callback(f"  Fallback: Category {i+1} -> {Path(candidate_path).name}")
-                                found = True
-                                break
-                    
-                    if not found:
-                        # Last resort: use any available image
-                        for idx in range(len(image_paths)):
-                            if idx not in used_indices_set:
-                                selected_paths[i] = Path(image_paths[idx])
-                                used_indices_set.add(idx)
-                                break
-            
-            # Verify we have exactly 5 images in correct order
-            if len([p for p in selected_paths if p is not None]) < 5:
-                if status_callback:
-                    status_callback(f"⚠️ Only {len([p for p in selected_paths if p is not None])} valid images selected, filling remaining...")
-            
-            # Ensure all 5 categories have images
-            final_selected = []
-            for i in range(5):
-                if selected_paths[i] is not None:
-                    final_selected.append(selected_paths[i])
-                else:
-                    # Emergency fallback: use remaining images
-                    for img_path in image_paths:
-                        img_path_obj = Path(img_path)
-                        if img_path_obj not in final_selected:
-                            final_selected.append(img_path_obj)
-                            break
-            
-            # CRITICAL: Ensure we have at least some images, even if less than 5
-            if len(final_selected) == 0:
-                # Last resort: use all available images
-                final_selected = [Path(img) for img in image_paths[:min(5, len(image_paths))]]
-            
-            selected_paths = final_selected[:5] if len(final_selected) > 0 else []
-            
-            # CRITICAL: If still empty, this is a fatal error - we need at least 1 image
-            if len(selected_paths) == 0:
-                raise ValueError(f"No images available for selection. Total images provided: {len(image_paths)}")
-            
-            if status_callback:
-                status_callback(f"✓ Final selection: {len(selected_paths)} images for report")
-                for i, img_path in enumerate(selected_paths, 1):
-                    status_callback(f"  Photo {i}: {Path(img_path).name}")
-            
-            # Get location map if identified
-            location_map_idx = result.get("location_map_index")
-            location_map_path = None
-            if location_map_idx is not None and 0 <= location_map_idx < len(image_paths):
-                if location_map_idx in image_map:
-                    location_map_path = Path(image_map[location_map_idx])
-                    # Ensure location map is not in the selected 5 images
-                    selected_paths_str = [str(p) for p in selected_paths]
-                    if str(location_map_path) in selected_paths_str:
-                        # Remove location map from selected images
-                        selected_paths = [p for p in selected_paths if str(p) != str(location_map_path)]
-                        
-                        # CRITICAL: Ensure we don't end up with empty list
-                        if len(selected_paths) == 0:
-                            # If removing location map left us empty, add it back and skip location map
-                            selected_paths = [location_map_path]
-                            location_map_path = None
-                            if status_callback:
-                                status_callback("⚠️ Location map was the only image - using it as regular image")
-                        else:
-                            # Add another image if we removed one (ensure we always have at least 5)
-                            while len(selected_paths) < 5 and len(selected_paths) < len(image_paths):
-                                found_replacement = False
-                                for img_path in image_paths:
-                                    img_path_str = str(img_path)
-                                    if img_path_str not in [str(p) for p in selected_paths] and img_path_str != str(location_map_path):
-                                        selected_paths.append(Path(img_path))
-                                        found_replacement = True
-                                        break
-                                if not found_replacement:
-                                    # No more images available, break to avoid infinite loop
-                                    break
-                    if status_callback:
-                        status_callback(f"🗺️ Location map identified: {location_map_path.name}")
-            else:
-                # Fallback: try to find location map by filename
-                if status_callback:
-                    status_callback("🔍 LLM didn't identify location map, checking filenames...")
-                location_map_keywords = ['map', 'location', 'google', 'satellite', 'street', 'gps', 'maps', 'road', 'address', 'area', 'loc', 'coordinate', 'lat', 'long']
-                for img_path in image_paths:
-                    img_name_lower = Path(img_path).name.lower()
-                    if any(keyword in img_name_lower for keyword in location_map_keywords):
-                        location_map_path = Path(img_path)
-                        # Ensure it's not in selected images
-                        selected_paths_str = [str(p) for p in selected_paths]
-                        if str(location_map_path) not in selected_paths_str:
-                            if status_callback:
-                                status_callback(f"🗺️ Location map found by filename: {location_map_path.name}")
-                            break
-            
-            # CRITICAL: Final safety check - ensure we never return empty list
-            if len(selected_paths) == 0:
-                if status_callback:
-                    status_callback("⚠️ Selected paths is empty, using fallback")
-                selected_paths = [Path(img) for img in image_paths[:min(5, len(image_paths))]]
-            
-            if len(selected_paths) == 0:
-                raise ValueError(f"Cannot select images: No valid images available. Total provided: {len(image_paths)}")
-            
-            return selected_paths[:5], location_map_path
-        except Exception as e:
-            print(f"⚠️ LLM image selection failed, using first 5 images: {e}")
-            # Fallback: use first 5 images, try to find location map by filename
-            location_map_path = None
-            location_map_keywords = ['map', 'location', 'google', 'satellite', 'street', 'gps', 'maps', 'road', 'address', 'area', 'loc', 'coordinate', 'lat', 'long']
-            for img_path in image_paths:
-                img_name_lower = Path(img_path).name.lower()
-                if any(keyword in img_name_lower for keyword in location_map_keywords):
-                    location_map_path = Path(img_path)
-                    break
-            
-            # CRITICAL: Ensure fallback also never returns empty
-            fallback_images = [Path(img) for img in image_paths[:min(5, len(image_paths))]]
-            if len(fallback_images) == 0:
-                raise ValueError(f"Cannot generate report: No images available. Please upload at least one image.")
-            
-            return fallback_images, location_map_path
+        if len(selected_paths) == 0:
+            raise ValueError(f"No images available for selection. Total images provided: {len(image_paths)}")
+        return selected_paths, location_map_path
     except AuthenticationError as e:
-        error_msg = f"API Authentication Error: Invalid or expired API key.\n\n"
-        error_msg += f"Please check your OPENAI_API_KEY.\n\n"
-        error_msg += f"Error details: {str(e)}"
-        raise ValueError(error_msg)
+        raise ValueError(
+            f"API Authentication Error: Invalid or expired API key. Check OPENAI_API_KEY. Details: {e}"
+        )
     except APIError as e:
-        error_msg = f"OpenAI API Error: {str(e)}"
-        raise ValueError(error_msg)
+        raise ValueError(f"OpenAI API Error: {str(e)}")
+    except ValueError as e:
+        if "OPENAI" in str(e).upper() or "API" in str(e).upper():
+            raise
+        if status_callback:
+            status_callback(f"⚠️ Image classification failed: {e}; using heuristic fallback.")
+        return classify_images(image_paths, method="heuristic", status_callback=status_callback)
+    except Exception as e:
+        print(f"⚠️ LLM image classification failed, using heuristic: {e}")
+        if status_callback:
+            status_callback("⚠️ LLM image classification failed; using heuristic fallback.")
+        return classify_images(image_paths, method="heuristic", status_callback=status_callback)
+
 
 @track_time("extract_info_with_gpt4o")
 def extract_info_with_gpt4o(property_folder: Path, status_callback=None, output_dir: Path = None, pre_extracted_text: str = None, documents_without_text: list = None) -> tuple:
